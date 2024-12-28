@@ -8,3 +8,12 @@ Feature: 可変長レコードを変換する
   Examples:
     | input | output |
     | AA003AAABB002BB | AAA:BB |
+
+  Scenario Outline: ファイル名指定
+    Given 入力データは "<input>"
+    When 入力データを読み込む
+    Then 期待値は "<expected>"
+
+  Examples:
+    | input | expected |
+    | A001_input01 | A001_expected01 |

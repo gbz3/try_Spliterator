@@ -2,7 +2,12 @@ package hellocucumber;
 
 import io.cucumber.java.en.*;
 import com.example.*;
+import org.junit.jupiter.api.Assertions;
 
+import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.nio.file.Path;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,6 +32,35 @@ public class StepDefinitions {
 
     @Then("変換結果 is {string}")
     public void theScenarioPasses(String output) {
+    }
+
+    private Path inputFile;
+
+    @Given("入力データは {string}")
+    public void input_is(String input) {
+        inputFile = Path.of("src/test/resources/data/" + input);
+    }
+
+    @When("入力データを読み込む")
+    public void loadInputFile() {
+    }
+
+    @Then("期待値は {string}")
+    public void expected_is(String expectedFile) {
+        //Path expectedPath = Path.of("src/test/resources/data/" + expectedFile);
+
+        try (
+                FileChannel input = FileChannel.open(inputFile);
+                //FileChannel expected = FileChannel.open(expectedPath)
+                ) {
+            String actual = StreamSupport.stream(new RecordA01Spliterator(input), false)
+                    .map(A01 -> new String(A01.value()))
+                    .collect(Collectors.joining());
+
+            assertEquals("", actual);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }
