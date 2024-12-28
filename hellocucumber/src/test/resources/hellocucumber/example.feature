@@ -7,4 +7,4 @@ Feature: 可変長レコードを変換する
 
   Examples:
     | input | output |
-    | A003AAAB002BB | AAA:BB |
+    | AA003AAABB002BB | AAA:BB |
