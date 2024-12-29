@@ -17,3 +17,14 @@ Feature: 可変長レコードを変換する
   Examples:
     | input | expected |
     | A001_input01 | A001_expected01 |
+
+  Scenario Outline: 可変長カラム
+    Given RecordB のカラム定義は以下の通り
+    | name | type | size |
+    | id | X | 4 |
+    | price | 9 | 6 |
+    Then 入力データが "<input>" の時、期待値は "<expected>"
+
+    Examples:
+    | input | expected |
+    | 0001999990 | 999990 |

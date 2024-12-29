@@ -1,12 +1,22 @@
 package hellocucumber;
 
+import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.*;
 import com.example.*;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -61,6 +71,130 @@ public class StepDefinitions {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private List<AnyField> recordB_fields = new ArrayList<>();
+
+    @Given("RecordB のカラム定義は以下の通り")
+    public void recordB_format(@NotNull DataTable columns) {
+        for (Map<String, String> column: columns.asMaps()) {
+            recordB_fields.add(
+                    new AnyField(
+                            column.get("name"),
+                            column.get("type"),
+                            Integer.parseInt(column.get("size"))
+                    )
+            );
+        }
+    }
+
+    @Then("入力データが {string} の時、期待値は {string}")
+    public void expected_is(String actual, String expected) {
+        FileChannel stub = new FileChannel() {
+            private final ByteBuffer content = ByteBuffer.wrap(actual.getBytes());
+            private long position = 0;
+
+            @Override
+            public int read(ByteBuffer dst) throws IOException {
+                if (position >= content.capacity()) {
+                    return -1;
+                }
+
+                content.position((int)position);
+                int remaining = Math.min(dst.remaining(), content.remaining());
+                byte[] temp = new byte[remaining];
+                content.get(temp);
+                dst.put(temp);
+                position += remaining;
+                return remaining;
+            }
+
+            @Override
+            public long read(ByteBuffer[] byteBuffers, int i, int i1) throws IOException {
+                return 0;
+            }
+
+            @Override
+            public int write(ByteBuffer byteBuffer) throws IOException {
+                return 0;
+            }
+
+            @Override
+            public long write(ByteBuffer[] byteBuffers, int i, int i1) throws IOException {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public long position() throws IOException {
+                return position;
+            }
+
+            @Override
+            public FileChannel position(long l) throws IOException {
+                this.position = l;
+                return this;
+            }
+
+            @Override
+            public long size() throws IOException {
+                return content.capacity();
+            }
+
+            @Override
+            public FileChannel truncate(long l) throws IOException {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void force(boolean b) throws IOException {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public long transferTo(long l, long l1, WritableByteChannel writableByteChannel) throws IOException {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public long transferFrom(ReadableByteChannel readableByteChannel, long l, long l1) throws IOException {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public int read(ByteBuffer byteBuffer, long l) throws IOException {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public int write(ByteBuffer byteBuffer, long l) throws IOException {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public MappedByteBuffer map(MapMode mapMode, long l, long l1) throws IOException {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public FileLock lock(long l, long l1, boolean b) throws IOException {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public FileLock tryLock(long l, long l1, boolean b) throws IOException {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            protected void implCloseChannel() throws IOException {}
+        };
+
+        StreamSupport.stream(new RecordBsSpliterator(stub, recordB_fields), false)
+                .forEach(rec -> {
+                    rec.forEach((k, v) -> {
+                        System.out.println("Key: " + k + " Value: " + v);
+                    });
+                });
     }
 
 }
