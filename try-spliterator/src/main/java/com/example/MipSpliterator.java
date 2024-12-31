@@ -1,6 +1,7 @@
 package com.example;
 
 import java.io.IOException;
+import java.io.InvalidObjectException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.IllegalFormatWidthException;
@@ -22,15 +23,21 @@ public class MipSpliterator implements Spliterator<byte[]> {
                 return false;
             }
 
-            ByteBuffer bb = ByteBuffer.allocate(1012);
-            input.read(bb);
-            if (bb.position() < 1012) {
-                throw new IllegalFormatWidthException(bb.position());
+            ByteBuffer data = ByteBuffer.allocate(1012);
+            ByteBuffer delimiter = ByteBuffer.allocate(2);
+
+            input.read(data);
+            input.read(delimiter);
+            if (data.position() < data.capacity()
+                    || delimiter.position() < delimiter.capacity()
+                    || delimiter.array()[0] != '@'
+                    || delimiter.array()[1] != '@') {
+                throw new InvalidObjectException("Invalid input (data.pos=" + data.position() + " delimiter.pos=" + delimiter.position() + ")");
             }
 
-            bb.flip();
-            action.accept(bb.array());
-            position += 1014;
+            data.flip();
+            action.accept(data.array());
+            position += data.capacity() + delimiter.capacity();
             return true;
 
         } catch (IOException e) {

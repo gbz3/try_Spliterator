@@ -42,7 +42,7 @@ public class AppTest
     }
 
     public void testSpliterator() {
-        String content = ("X".repeat(1012) + "@@").repeat(3);
+        String content = ("X".repeat(1012) + "@ ").repeat(3);
 
         try (FileChannel stub = new FileChannelStub(content)) {
             StreamSupport.stream(new MipSpliterator(stub), false)
