@@ -6,7 +6,9 @@ import junit.framework.TestSuite;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
@@ -42,15 +44,21 @@ public class AppTest
     }
 
     public void testSpliterator() {
-        String content = ("X".repeat(1012) + "@ ").repeat(3);
+        String content = ("X".repeat(1012) + "@@").repeat(3);
 
         try (FileChannel stub = new FileChannelStub(content)) {
-            StreamSupport.stream(new MipSpliterator(stub), false)
-                    .map(array -> array.length)
-                    .forEach( length -> assertEquals(1012, (int) length));
+            String actual = StreamSupport.stream(new MipSpliterator(stub), false)
+                    .map(String::new)
+                    .collect(Collectors.joining());
+
+            assertEquals(1012 * 3, actual.length());
+            assertTure(actual.chars().allMatch(ch -> ch == 'X'));
 
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void assertTure(boolean b) {
     }
 }
