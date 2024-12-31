@@ -31,6 +31,13 @@ $ mvn archetype:generate                     \
 $
 ```
 
+### 新規プロジェクト作成
+
+```shell
+$ mvn archetype:generate -DgroupId=com.example -DartifactId=try-spliterator -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
+$ 
+```
+
 ### 基本コマンド
 
 ```shell
