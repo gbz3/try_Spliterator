@@ -23,15 +23,20 @@ public class FileChannelStub extends FileChannel {
 
     @Override
     public int read(ByteBuffer dst) throws IOException {
-        if (position >= content.capacity()) {
+        return read(dst, this.position);
+    }
+
+    @Override
+    public int read(ByteBuffer dst, long l) throws IOException {
+        if (l >= content.capacity()) {
             return -1;
         }
 
-        content.position((int) position);
+        content.position((int) l);
         byte[] temp = new byte[Math.min(dst.remaining(), content.remaining())];
         content.get(temp);
         dst.put(temp);
-        position += temp.length;
+        position = l + temp.length;
         return temp.length;
     }
 
@@ -80,11 +85,6 @@ public class FileChannelStub extends FileChannel {
 
     @Override
     public long transferFrom(ReadableByteChannel readableByteChannel, long l, long l1) throws IOException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public int read(ByteBuffer byteBuffer, long l) throws IOException {
         throw new UnsupportedOperationException();
     }
 
