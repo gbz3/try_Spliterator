@@ -7,9 +7,13 @@ import junit.framework.TestSuite;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Spliterator;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -61,35 +65,36 @@ public class AppTest
         }
     }
 
+    Function<String, String> toMip = src -> {
+        final Charset srcCharset = StandardCharsets.UTF_8;
+        final byte[] insertBytes = new byte[]{(byte)0x40, (byte)0x40};
+        final int cutSize = 1012;
+
+        byte[] srcBytes = src.getBytes(srcCharset);
+        int insertCount = (srcBytes.length - 1) / cutSize + 1;
+        byte[] destBytes = new byte[srcBytes.length + insertCount * insertBytes.length];
+        for (int srcPos = 0, destPos = 0; srcPos < srcBytes.length;) {
+            int copyLen = Math.min(cutSize, srcBytes.length - srcPos);
+            System.arraycopy(srcBytes, srcPos, destBytes, destPos, copyLen);
+            srcPos += copyLen;
+            destPos += copyLen;
+            if (srcPos < srcBytes.length) {
+                System.arraycopy(insertBytes, 0, destBytes, destPos, insertBytes.length);
+                destPos += insertBytes.length;
+            }
+        }
+        return new String(destBytes, srcCharset);
+    };
+
     public void testSameRecords() {
         List<VariableLengthField> fieldsOfRecord = List.of(
                 VariableLengthField.of("A", "X", 1),
                 VariableLengthField.of("B", "X", 2),
                 VariableLengthField.of("C", "X", 3)
         );
-        //String content = "ABBCCC".repeat(168) + "ABBC@@CC";
         final String expected = "ABBCCC".repeat(200);
-        BiFunction<String, Integer, String> toMip = (src, times) -> {
-            byte[] srcBytes = src.getBytes();
-            byte[] insertBytes = new byte[]{(byte)0x40, (byte)0x40};
-            int insertCount = (srcBytes.length - 1) / 1012 + 1;
-            byte[] destBytes = new byte[srcBytes.length + insertCount * 2];
-            int srcPos = 0;
-            int destPos = 0;
-            while (srcPos < srcBytes.length) {
-                int copyLen = Math.min(1012, srcBytes.length - srcPos);
-                System.arraycopy(srcBytes, srcPos, destBytes, destPos, copyLen);
-                srcPos += copyLen;
-                destPos += copyLen;
-                if (srcPos < srcBytes.length) {
-                    System.arraycopy(insertBytes, 0, destBytes, destPos, insertBytes.length);
-                    destPos += insertBytes.length;
-                }
-            }
-            return new String(destBytes);
-        };
 
-        try (FileChannel stub = new FileChannelStub(toMip.apply(expected, 200))) {
+        try (FileChannel stub = new FileChannelStub(toMip.apply(expected))) {
             AtomicInteger recordCount = new AtomicInteger(0);
             String actual = StreamSupport.stream(dev.iamgbz3.MipSpliterator.of(stub, fieldsOfRecord), false)
                     .peek(e -> System.out.printf("#%03d: %s%n", recordCount.incrementAndGet(), String.join("/", e.values())))
