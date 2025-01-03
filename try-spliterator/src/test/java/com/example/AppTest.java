@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -50,7 +51,7 @@ public class AppTest
     public void test3recordsX() {
         String content = ("X".repeat(1012) + "@@").repeat(3);
 
-        try (FileChannel stub = new FileChannelStub(content)) {
+        try (FileChannel stub = new FileChannelStub(content.getBytes())) {
             String actual = StreamSupport.stream(new MipSpliterator(stub), false)
                     .map(String::new)
                     .collect(Collectors.joining());
@@ -63,12 +64,10 @@ public class AppTest
         }
     }
 
-    Function<String, String> toMip = src -> {
-        final Charset srcCharset = StandardCharsets.UTF_8;
+    Function<byte[], byte[]> toMip = srcBytes -> {
         final byte[] insertBytes = new byte[]{(byte)0x40, (byte)0x40};
         final int cutSize = 1012;
 
-        byte[] srcBytes = src.getBytes(srcCharset);
         int insertCount = (srcBytes.length - 1) / cutSize + 1;
         byte[] destBytes = new byte[srcBytes.length + insertCount * insertBytes.length];
         for (int srcPos = 0, destPos = 0; srcPos < srcBytes.length;) {
@@ -81,7 +80,7 @@ public class AppTest
                 destPos += insertBytes.length;
             }
         }
-        return new String(destBytes, srcCharset);
+        return destBytes;
     };
 
     public void testSameRecords() {
@@ -90,7 +89,7 @@ public class AppTest
                 VariableLengthField.of("B", "X", 2),
                 VariableLengthField.of("C", "X", 3)
         );
-        final String expected = "ABBCCC".repeat(200);
+        final byte[] expected = "ABBCCC".repeat(200).getBytes(StandardCharsets.UTF_8);
 
         try (FileChannel stub = new FileChannelStub(toMip.apply(expected))) {
             AtomicInteger recordCount = new AtomicInteger(0);
@@ -101,6 +100,25 @@ public class AppTest
 
             assertEquals((fieldsOfRecord.stream().mapToInt(VariableLengthField::size).sum() + fieldsOfRecord.size() - 1) * 200, actual.length());
             assertEquals("A:BB:CCC".repeat(200), actual);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void testCp930String() {
+        List<VariableLengthField> fieldsOfRecord = List.of(VariableLengthField.of("9", "9", 11));
+        final byte[] expected = " 0123456789".repeat(100).getBytes(Charset.forName("Cp930"));
+
+        try (FileChannel stub = new FileChannelStub(toMip.apply(expected))) {
+
+            String actual = StreamSupport.stream(dev.iamgbz3.MipSpliterator.of(stub, fieldsOfRecord), false)
+                    .map(e -> String.join(":", e.values()))
+                    .collect(Collectors.joining());
+
+            assertEquals((fieldsOfRecord.stream().mapToInt(VariableLengthField::size).sum() + fieldsOfRecord.size() - 1) * 100, actual.length());
+            byte[] myBytes = HexFormat.of().parseHex("40F0F1F2F3F4F5F6F7F8F9");
+            assertEquals(new String(myBytes).repeat(100), actual);
 
         } catch (IOException e) {
             e.printStackTrace();

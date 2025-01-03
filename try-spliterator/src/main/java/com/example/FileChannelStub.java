@@ -1,5 +1,7 @@
 package com.example;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
@@ -12,8 +14,8 @@ public class FileChannelStub extends FileChannel {
     private final ByteBuffer content;
     private long position = 0;
 
-    public FileChannelStub(String content) {
-        this.content = ByteBuffer.wrap(content.getBytes());
+    public FileChannelStub(byte @NotNull [] content) {
+        this.content = ByteBuffer.wrap(content);
     }
 
     @Override
